@@ -22,17 +22,20 @@
 
         public async Task<Response<ServiceHostAndPort>> Lease(HttpContext httpContext)
         {
-            var services = await _services();
             lock (_lock)
             {
-                if (_last >= services.Count)
-                {
-                    _last = 0;
-                }
+                var services = _services().GetAwaiter().GetResult();
+                if (services != null && services.Count > 0) {
+                    if (_last >= services.Count)
+                    {
+                        _last = 0;
+                    }
 
-                var next = services[_last];
-                _last++;
-                return new OkResponse<ServiceHostAndPort>(next.HostAndPort);
+                    var next = services[_last];
+                    _last++;
+                    return new OkResponse<ServiceHostAndPort>(next.HostAndPort);
+                }
+                return new ErrorResponse<ServiceHostAndPort>(new UnableToFindDownstreamRouteError(httpContext.Request.Path, httpContext.Request.Method));
             }
         }
 
